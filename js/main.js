@@ -418,34 +418,57 @@ document.addEventListener('DOMContentLoaded', function() {
     // Contact info cards enhanced animations
     const contactInfoCards = document.querySelectorAll('.contact-info-card');
     contactInfoCards.forEach(card => {
+        let typeWriterInterval = null;
+        let originalHTML = null;
         card.addEventListener('mouseenter', function() {
             // Add pulsing effect to icon
             const icon = this.querySelector('.contact-icon');
             if (icon) {
                 icon.style.animation = 'pulse 1s ease-in-out infinite';
             }
-            
-            // Add typing effect to text
+            // Add typing effect to text (preserve <br> and formatting)
             const details = this.querySelector('.contact-details p');
             if (details) {
-                const text = details.textContent;
-                details.textContent = '';
-                let i = 0;
-                const typeWriter = setInterval(() => {
-                    if (i < text.length) {
-                        details.textContent += text.charAt(i);
-                        i++;
-                    } else {
-                        clearInterval(typeWriter);
+                if (!originalHTML) originalHTML = details.innerHTML;
+                const html = originalHTML;
+                // Split by <br> to animate line by line
+                const lines = html.split(/<br\s*\/?\s*>/i);
+                details.innerHTML = '';
+                let lineIdx = 0;
+                function typeLine() {
+                    if (lineIdx >= lines.length) return;
+                    let charIdx = 0;
+                    const line = lines[lineIdx];
+                    const span = document.createElement('span');
+                    details.appendChild(span);
+                    function typeChar() {
+                        if (charIdx < line.length) {
+                            span.textContent += line.charAt(charIdx);
+                            charIdx++;
+                            typeWriterInterval = setTimeout(typeChar, 18);
+                        } else {
+                            if (lineIdx < lines.length - 1) details.appendChild(document.createElement('br'));
+                            lineIdx++;
+                            typeWriterInterval = setTimeout(typeLine, 120);
+                        }
                     }
-                }, 50);
+                    typeChar();
+                }
+                typeLine();
             }
         });
-        
         card.addEventListener('mouseleave', function() {
             const icon = this.querySelector('.contact-icon');
             if (icon) {
                 icon.style.animation = '';
+            }
+            const details = this.querySelector('.contact-details p');
+            if (details && originalHTML) {
+                details.innerHTML = originalHTML;
+            }
+            if (typeWriterInterval) {
+                clearTimeout(typeWriterInterval);
+                typeWriterInterval = null;
             }
         });
     });
@@ -608,39 +631,6 @@ document.addEventListener('DOMContentLoaded', function() {
         fadeInObserver.observe(element);
     });
 
-    // Add particle effect on mouse move
-    let particles = [];
-    const maxParticles = 50;
-    
-    function createParticle(x, y) {
-        return {
-            x: x,
-            y: y,
-            vx: (Math.random() - 0.5) * 4,
-            vy: (Math.random() - 0.5) * 4,
-            life: 1,
-            decay: 0.02
-        };
-    }
-    
-    function updateParticles() {
-        particles = particles.filter(particle => {
-            particle.x += particle.vx;
-            particle.y += particle.vy;
-            particle.life -= particle.decay;
-            return particle.life > 0;
-        });
-    }
-    
-    document.addEventListener('mousemove', function(e) {
-        if (particles.length < maxParticles && Math.random() < 0.1) {
-            particles.push(createParticle(e.clientX, e.clientY));
-        }
-    });
-    
-    // Animate particles
-    setInterval(updateParticles, 16);
-    
     // Add scroll-triggered animations for sections
     const animatedSections = document.querySelectorAll('section');
     const sectionObserver = new IntersectionObserver((entries) => {
@@ -721,73 +711,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 600);
     }
     
-    // Add VELOX cursor trail effect
-    let veloxTrail = [];
-    const maxVeloxTrails = 10;
-    
-    document.addEventListener('mousemove', function(e) {
-        if (veloxTrail.length >= maxVeloxTrails) {
-            const oldTrail = veloxTrail.shift();
-            if (oldTrail && oldTrail.parentNode) {
-                oldTrail.parentNode.removeChild(oldTrail);
-            }
-        }
-        
-        const veloxElement = document.createElement('div');
-        veloxElement.innerHTML = 'V';
-        veloxElement.style.cssText = `
-            position: fixed;
-            left: ${e.clientX}px;
-            top: ${e.clientY}px;
-            color: rgba(0, 0, 0, 0.4);
-            font-size: 14px;
-            font-weight: 900;
-            font-family: 'Oswald', sans-serif;
-            pointer-events: none;
-            z-index: 9999;
-            animation: veloxTrailFade 1.2s ease-out forwards;
-            transform: translate(-50%, -50%);
-        `;
-        
-        document.body.appendChild(veloxElement);
-        veloxTrail.push(veloxElement);
-    });
-    
-    // Add VELOX trail fade animation
-    const swooshStyle = document.createElement('style');
-    swooshStyle.textContent = `
-        @keyframes veloxTrailFade {
-            0% {
-                opacity: 1;
-                transform: translate(-50%, -50%) scale(1) rotate(0deg);
-            }
-            50% {
-                opacity: 0.8;
-                transform: translate(-50%, -50%) scale(1.2) rotate(15deg);
-            }
-            100% {
-                opacity: 0;
-                transform: translate(-50%, -50%) scale(0.3) rotate(45deg);
-            }
-        }
-        
-        .section-visible {
-            animation: sectionSlideIn 0.8s ease-out forwards;
-        }
-        
-        @keyframes sectionSlideIn {
-            from {
-                opacity: 0;
-                transform: translateY(50px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-    `;
-    document.head.appendChild(swooshStyle);
-    
     // Enhanced loading animation for images
     const lazyImages = document.querySelectorAll('img[data-src]');
     const imageObserver = new IntersectionObserver((entries) => {
@@ -804,7 +727,7 @@ document.addEventListener('DOMContentLoaded', function() {
     lazyImages.forEach(img => {
         imageObserver.observe(img);
     });
-    
+
     // Add dynamic background color change on scroll
     window.addEventListener('scroll', function() {
         const scrollPercent = window.pageYOffset / (document.documentElement.scrollHeight - window.innerHeight);
